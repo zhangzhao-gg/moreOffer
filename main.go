@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -13,14 +15,14 @@ import (
 
 // OfferData 定义offer数据结构
 type OfferData struct {
-	OfferCount  int    `json:"offerCount" binding:"required,min=0"`
+	OfferCount  int    `json:"offerCount" binding:"min=0"`
 	SalaryRange string `json:"salaryRange" binding:"required"`
 	Industry    string `json:"industry" binding:"required"`
 }
 
 // OfferSubmission 数据库模型
 type OfferSubmission struct {
-	ID              int       `gorm:"primaryKey;autoIncrement" json:"id"`
+	ID              int       `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
 	EducationLevel  *string   `gorm:"column:education_level" json:"education_level"`
 	SchoolTier      *string   `gorm:"column:school_tier" json:"school_tier"`
 	MajorCategory   *string   `gorm:"column:major_category" json:"major_category"`
@@ -114,6 +116,13 @@ func main() {
 
 	// 提交offer数据的接口
 	r.POST("/api/offer", func(c *gin.Context) {
+		// 先打印原始请求体
+		body, _ := c.GetRawData()
+		logrus.WithField("rawBody", string(body)).Info("收到原始请求体")
+
+		// 重新设置请求体
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+
 		var offerData OfferData
 
 		if err := c.ShouldBindJSON(&offerData); err != nil {
@@ -121,6 +130,14 @@ func main() {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":   "数据格式错误",
 				"details": err.Error(),
+			})
+			return
+		}
+
+		// 手动验证 offerCount
+		if offerData.OfferCount < 0 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Offer数量不能为负数",
 			})
 			return
 		}
