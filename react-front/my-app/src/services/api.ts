@@ -33,4 +33,23 @@ export class ApiService {
       throw error;
     }
   }
+
+  static async getStats(industry?: string, salaryRange?: string): Promise<ApiResponse<any>> {
+    try {
+      // 构建查询参数
+      const params = new URLSearchParams();
+      if (industry) params.append('industry', industry);
+      if (salaryRange) params.append('salaryRange', salaryRange);
+      
+      const url = `${API_CONFIG.BASE_URL}/api/stats${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('获取统计数据失败:', error);
+      throw error;
+    }
+  }
 }
